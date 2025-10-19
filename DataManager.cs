@@ -99,13 +99,19 @@ namespace ExoScan
                 return CurrentSystem;
 
             // If the requested system is not the current system, save the current system to db
-            CurrentSystem?.Save();
+            if (CurrentSystem != null && CurrentSystem.SystemId != 0)
+                CurrentSystem.Save();
 
             // search system in cache
             if (!_systemCache.TryGetValue(systemAddress, out var system))
             {
                 // if not found, try db. Otherwise, create it
-                system = Systems.FindById(systemAddress) ?? new StarSystem { SystemId = systemAddress };
+                system = Systems
+                    .Include(x => x.Statuses)
+                    .Include(x => x.NonBodies)
+                    .Include(x => x.Planets)
+                    .Include(x => x.Stars)
+                    .FindById(systemAddress) ?? new StarSystem { SystemId = systemAddress };
                 _systemCache[systemAddress] = system;
             }
 
@@ -340,25 +346,28 @@ namespace ExoScan
 
         public void HandleEliteApiEvent(IEvent eventData, EventContext context)
         {
-            switch (eventData)
+            if (!context.IsRaisedDuringCatchup)
             {
-                case ScanEvent e: HandleScan(e); break;
-                case ScanBaryCentreEvent e: HandleScanBaryCentre(e); break;
-                case FssBodySignalsEvent e: HandleFssBodySignals(e); break;
-                case SaaSignalsFoundEvent e: HandleSaaSignalsFound(e); break;
-                case ScanOrganicEvent e: HandleScanOrganic(e); break;
-                case LocationEvent e: HandleLocation(e); break;
-                case FsdJumpEvent e: HandleFsdJump(e); break;
-                case CarrierJumpEvent e: HandleCarrierJump(e); break;
-                case FssDiscoveryScanEvent e: HandleFssDiscoveryScan(e); break;
-                case FssAllBodiesFoundEvent e: HandleFssAllBodiesFound(e); break;
-                case SaaScanCompleteEvent e: HandleSaaScanComplete(e); break;
-                case LoadGameEvent e: HandleLoadGame(e); break;
-                case CommanderEvent e: HandleCommander(e); break;
-                case NewCommanderEvent e: HandleNewCommander(e); break;
-                case CodexEntryEvent e: HandleCodexEntry(e); break;
-                default:
-                    break;
+                switch (eventData)
+                {
+                    case ScanEvent e: HandleScan(e); break;
+                    case ScanBaryCentreEvent e: HandleScanBaryCentre(e); break;
+                    case FssBodySignalsEvent e: HandleFssBodySignals(e); break;
+                    case SaaSignalsFoundEvent e: HandleSaaSignalsFound(e); break;
+                    case ScanOrganicEvent e: HandleScanOrganic(e); break;
+                    case LocationEvent e: HandleLocation(e); break;
+                    case FsdJumpEvent e: HandleFsdJump(e); break;
+                    case CarrierJumpEvent e: HandleCarrierJump(e); break;
+                    case FssDiscoveryScanEvent e: HandleFssDiscoveryScan(e); break;
+                    case FssAllBodiesFoundEvent e: HandleFssAllBodiesFound(e); break;
+                    case SaaScanCompleteEvent e: HandleSaaScanComplete(e); break;
+                    case LoadGameEvent e: HandleLoadGame(e); break;
+                    case CommanderEvent e: HandleCommander(e); break;
+                    case NewCommanderEvent e: HandleNewCommander(e); break;
+                    case CodexEntryEvent e: HandleCodexEntry(e); break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -372,7 +381,7 @@ namespace ExoScan
 
             foreach (var file in files)
             {
-                var context = new EventContext() { IsImplemented = true, IsRaisedDuringCatchup = true, SourceFile = file };
+                var context = new EventContext() { IsImplemented = true, IsRaisedDuringCatchup = false, SourceFile = file };
 
                 OnLog?.Invoke($"Parsing journal {file}");
 
