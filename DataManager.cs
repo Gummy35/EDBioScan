@@ -4,6 +4,7 @@ using EliteAPI.Events;
 using ExoScan.CodexData;
 using ExoScan.StellarStructs;
 using LiteDB;
+using System.Numerics;
 using System.Text.RegularExpressions;
 namespace ExoScan
 {
@@ -156,7 +157,7 @@ namespace ExoScan
                     double dz = s.Position.Z - currentPosition.Z;
 
                     double distSq = dx * dx + dy * dy + dz * dz;
-                    return distSq <= range2;
+                    return distSq <= range2 && s.ScanResults.Count > 0;
                 });
             }
             else
@@ -242,6 +243,33 @@ namespace ExoScan
         public void HandleFssAllBodiesFound(FssAllBodiesFoundEvent data)
         {
             var currentSystem = CurrentSystem;
+            var hasChanges = false;
+            foreach (var p in currentSystem.Planets)
+            {
+                var planetHasChanges = false;
+                if (p.BioSignals == null || p.GeoSignals == null)
+                {
+                    if (p.BioSignals == null && p.Floras.Count == 0)
+                        p.BioSignals = 0;
+
+                    if (p.GeoSignals == null)
+                        p.GeoSignals = 0;
+                }
+                if (p.BioSignals == 0 && currentSystem.ScanResults.ContainsKey(p.BodyId))
+                {
+                    currentSystem.ScanResults.Remove(p.BodyId);
+                    planetHasChanges = true;
+                }
+
+                if (planetHasChanges)
+                    Planets.Upsert(p);
+
+                hasChanges |= planetHasChanges;
+            }
+            if (hasChanges)
+                Systems.Upsert(currentSystem);
+            ExoDataUpdateHandler?.Invoke(CurrentSystem, null, data.Timestamp);
+
             currentSystem.GetSystemStatus().FullyScanned = true;
         }
 

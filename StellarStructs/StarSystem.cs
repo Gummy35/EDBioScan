@@ -42,7 +42,6 @@ namespace ExoScan.StellarStructs
         public List<NonBody> NonBodies { get; set; } = new();
         public int LastBodyId { get; set; }
         public string LastBodyName { get; set; }
-        public Dictionary<int, List<ScanCacheEntry>> ScanCache { get; set; } = new();
 
         private static BioForecast bioScanEvaluator = new BioForecast();
 
@@ -219,10 +218,15 @@ namespace ExoScan.StellarStructs
                 // this is a detailed scan, and a fsscompletescan was done on it
                 if (scanType == ScanType.AutoOrDetailed && status.Mapped)
                 {
-                    if (planet.BioSignals == null)
+                    if (planet.BioSignals == null && planet.Floras.Count == 0)
                         planet.BioSignals = 0;
+
                     if (planet.GeoSignals == null)
                         planet.GeoSignals = 0;
+                }
+                if (planet.BioSignals == 0 && ScanResults.ContainsKey(planet.BodyId))
+                {
+                    ScanResults.Remove(planet.BodyId);
                 }
             }
 
@@ -352,7 +356,7 @@ namespace ExoScan.StellarStructs
             else return "";
         }
 
-        public Dictionary<int, List<ScanCacheEntry>> UpdateScanResults(int? bodyId, out bool hasChanges)
+        public Dictionary<int, List<ScanResultEntry>> UpdateScanResults(int? bodyId, out bool hasChanges)
         {
             bioScanEvaluator.SetSystem(this);
             List<Planet> planetList;
@@ -401,7 +405,7 @@ namespace ExoScan.StellarStructs
                 ExoData.Systems.Upsert(this);
             }
 
-            return ScanCache;
+            return ScanResults;
         }
 
         public void Save()

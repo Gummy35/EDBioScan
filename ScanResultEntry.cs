@@ -13,65 +13,39 @@ namespace ExoScan
             var res = new List<ScanResultEntry>();
             if (r != null)
             {
+                var baseEntry = new ScanResultEntry
+                {
+                    Name = r.Display,
+                    AtmosphereType = AtmosphereHelper.GetAtmosphereTypeName(body.Atmosphere),
+                    BodyName = body.Name,
+                    Genus = r.Genus,
+                    Distance = GenusData.Data[r.Genus].Distance,
+                    PlanetClass = BodyTypeHelper.GetBodyTypeName(body.BodyType),
+                    Seen = (body.Floras.Count > 0 && body.Floras.ContainsKey(r.Genus) && body.Floras[r.Genus].Scans.Count > 0) ? BioSeen.Seen : BioSeen.NotSeen
+                };
+
+                var count = body.BioSignals == null ? body.Floras.Count() : body.BioSignals.Value;
+                if (count == 0 && !body.Statuses.Any(s => s.Mapped))
+                    count = -1;
+                baseEntry.BioSignalCount = count;
+
                 if (r.Species.Count == 1)
                 {
-                    //foreach (var species in r.Species)
-                    //{
-
                     var display = GenusData.GetSpeciesName((ushort)r.Species.Keys.First());
-                    var baseEntry = new ScanResultEntry
-                    {
-                        //Value = species.Value.Value,
-                        Value = r.MinValue,
-                        Name = display,
-                        AtmosphereType = AtmosphereHelper.GetAtmosphereTypeName(body.Atmosphere),
-                        BodyName = body.Name,
-                        Genus = r.Genus,
-                        Distance = GenusData.Data[r.Genus].Distance,
-                        PlanetClass = BodyTypeHelper.GetBodyTypeName(body.BodyType),
-                        Seen = (body.Floras.Count > 0 && body.Floras.ContainsKey(r.Genus) && body.Floras[r.Genus].Scans.Count > 0) ? BioSeen.Seen : BioSeen.NotSeen,
-                        //                            Species = species.Key,
-                        //                            Variants = species.Value.Variants.ToList()
-                    };
+                    baseEntry.Value = r.MinValue;
+                    baseEntry.Name = display;
                     res.Add(baseEntry);
-                    //                    }
                 }
-                else
-                if (r.Species.Count > 1)
+                else if (r.Species.Count > 1)
                 {
-                    //foreach (var species in r.Species)
-                    //{
-                    var baseEntry = new ScanResultEntry
-                    {
-                        //Value = species.Value.Value,
-                        Value = r.MinValue,
-                        MaxValue = r.MaxValue,
-                        Name = $"{r.Display} (x{r.Species.Count})",
-                        AtmosphereType = AtmosphereHelper.GetAtmosphereTypeName(body.Atmosphere),
-                        BodyName = body.Name,
-                        Genus = r.Genus,
-                        Distance = GenusData.Data[r.Genus].Distance,
-                        PlanetClass = BodyTypeHelper.GetBodyTypeName(body.BodyType),
-                        Seen = (body.Floras.Count > 0 && body.Floras.ContainsKey(r.Genus) && body.Floras[r.Genus].Scans.Count > 0) ? BioSeen.Seen : BioSeen.NotSeen,
-                        //                            Species = species.Key,
-                        //                            Variants = species.Value.Variants.ToList()
-                    };
+                    baseEntry.Value = r.MinValue;
+                    baseEntry.MaxValue = r.MaxValue;
+                    baseEntry.Name = $"{r.Display} (x{r.Species.Count})";
                     res.Add(baseEntry);
-                    //                    }
                 }
                 else
                 {
-                    var baseEntry = new ScanResultEntry
-                    {
-                        Value = r.MaxValue,
-                        Name = r.Display,
-                        AtmosphereType = AtmosphereHelper.GetAtmosphereTypeName(body.Atmosphere),
-                        BodyName = body.Name,
-                        Genus = r.Genus,
-                        Distance = GenusData.Data[r.Genus].Distance,
-                        PlanetClass = BodyTypeHelper.GetBodyTypeName(body.BodyType),
-                        Seen = (body.Floras.Count > 0 && body.Floras.ContainsKey(r.Genus) && body.Floras[r.Genus].Scans.Count > 0) ? BioSeen.Seen : BioSeen.NotSeen
-                    };
+                    baseEntry.Value = r.MaxValue;
                     res.Add(baseEntry);
                 }
             }
@@ -89,6 +63,7 @@ namespace ExoScan
         public int Distance { get; set; }
         public string BodyName { get; set; }
         public string PlanetClass { get; set; }
+        public int BioSignalCount { get; set; }
         public string AtmosphereType { get; set; }
         public BioSeen Seen { get; set; }
         public GenusEnum Genus { get; set; }
